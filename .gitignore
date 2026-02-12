@@ -1,0 +1,45 @@
+# === Secrets ===
+.env
+.env.local
+.env.*.local
+
+# === Daten (zu groß für Git) ===
+data/
+_archive/
+
+# === Alt-Code mit hardcoded Secrets ===
+etl/
+scripts/
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.Python
+*.egg
+
+# === Node ===
+node_modules/
+package-lock.json
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Streamlit ===
+saved_profiles.json
+
+# === Docs mit Secrets ===
+docs/TED API key.docx

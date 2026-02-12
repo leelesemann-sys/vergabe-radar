@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VergabeRadar - Semantic Search Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .search-box {
+            margin-bottom: 30px;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 15px 30px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #resetBtn {
+            background: #666;
+        }
+        #resetBtn:hover {
+            background: #444;
+        }
+        .stats {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .result-item {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            background: white;
+        }
+        .result-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .result-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .result-description {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .result-score {
+            color: #0066cc;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            color: #c00;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 VergabeRadar - Version A (Semantic Search)</h1>
+        
+        <!-- Suchfeld -->
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Suche nach Ausschreibungen... (z.B. 'Cloud Migration', 'IT-Dienstleistung', 'Digitalisierung')"
+            >
+        </div>
+
+        <!-- Filter -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>CPV-Code (Kategorie)</label>
+                <select id="cpvFilter">
+                    <option value="">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Region</label>
+                <select id="regionFilter">
+                    <option value="">Alle Regionen</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Auftraggeber</label>
+                <select id="buyerFilter">
+                    <option value="">Alle Auftraggeber</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Datum ab</label>
+                <input type="date" id="dateFrom">
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div>
+            <button onclick="search()">🔍 Suchen</button>
+            <button id="resetBtn" onclick="reset()">🔄 Zurücksetzen</button>
+        </div>
+
+        <!-- Statistik -->
+        <div class="stats" id="stats" style="display:none;">
+            <strong>Ergebnisse:</strong> <span id="resultCount">0</span> gefunden
+            | <strong>Zeit:</strong> <span id="searchTime">0</span>ms
+        </div>
+
+        <!-- Fehleranzeige -->
+        <div class="error" id="error" style="display:none;"></div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading" style="display:none;">
+            Suche läuft...
+        </div>
+
+        <!-- Ergebnisse -->
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        // ========================================================================
+        // KONFIGURATION - HIER ANPASSEN!
+        // ========================================================================
+        
+        const CONFIG = {
+            searchEndpoint: 'https://vergaberadar-search.search.windows.net',
+            indexName: 'vergaberadar-semantic',
+            apiKey: 'YOUR_QUERY_KEY_HERE',  // ← Query Key aus Azure Portal eintragen
+            apiVersion: '2024-07-01'
+        };
+
+        // ========================================================================
+        // SUCHE
+        // ========================================================================
+
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            
+            if (!query) {
+                alert('Bitte Suchbegriff eingeben');
+                return;
+            }
+
+            // UI Update
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+
+            // Filter sammeln
+            const cpv = document.getElementById('cpvFilter').value;
+            const region = document.getElementById('regionFilter').value;
+            const buyer = document.getElementById('buyerFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+
+            // Filter-String bauen
+            let filter = [];
+            if (cpv) filter.push(`cpv_code eq '${cpv}'`);
+            if (region) filter.push(`buyer_region eq '${region}'`);
+            if (buyer) filter.push(`buyer_name eq '${buyer}'`);
+            if (dateFrom) filter.push(`publication_date ge ${dateFrom}T00:00:00Z`);
+
+            const filterString = filter.join(' and ');
+
+            // API Call
+            const startTime = performance.now();
+
+            try {
+                const url = `${CONFIG.searchEndpoint}/indexes/${CONFIG.indexName}/docs/search?api-version=${CONFIG.apiVersion}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': CONFIG.apiKey
+                    },
+                    body: JSON.stringify({
+                        search: query,
+                        queryType: 'semantic',
+                        semanticConfiguration: 'vergaberadar-semantic-config',
+                        top: 20,
+                        select: 'id,title,description,buyer_name,buyer_city,buyer_region,cpv_code,publication_date,notice_identifier,estimated_value',
+                        filter: filterString || undefined
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Fehler: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const endTime = performance.now();
+
+                // Ergebnisse anzeigen
+                displayResults(data.value, endTime - startTime);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('error').textContent = `Fehler: ${error.message}`;
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayResults(results, time) {
+            const container = document.getElementById('results');
+            
+            // Statistik
+            document.getElementById('resultCount').textContent = results.length;
+            document.getElementById('searchTime').textContent = Math.round(time);
+            document.getElementById('stats').style.display = 'block';
+
+            // Ergebnisse
+            if (results.length === 0) {
+                container.innerHTML = '<p style="padding:20px;text-align:center;color:#666;">Keine Ergebnisse gefunden</p>';
+                return;
+            }
+
+            container.innerHTML = results.map((doc, index) => `
+                <div class="result-item">
+                    <div class="result-title">
+                        ${index + 1}. ${escapeHtml(doc.title || 'Ohne Titel')}
+                    </div>
+                    <div class="result-meta">
+                        📍 ${escapeHtml(doc.buyer_name || 'N/A')} 
+                        ${doc.buyer_city ? '• ' + escapeHtml(doc.buyer_city) : ''}
+                        ${doc.buyer_region ? '• ' + escapeHtml(doc.buyer_region) : ''}
+                        ${doc.cpv_code ? '• CPV: ' + escapeHtml(doc.cpv_code) : ''}
+                        ${doc.publication_date ? '• 📅 ' + new Date(doc.publication_date).toLocaleDateString('de-DE') : ''}
+                    </div>
+                    <div class="result-description">
+                        ${escapeHtml((doc.description || '').substring(0, 300))}...
+                    </div>
+                    ${doc['@search.rerankerScore'] ? 
+                        `<div class="result-score">Semantic Score: ${doc['@search.rerankerScore'].toFixed(2)}</div>` : ''
+                    }
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========================================================================
+        // FILTER LADEN
+        // ========================================================================
+
+        async function loadFilters() {
+            // CPV Codes laden
+            const cpvCodes = await getFacets('cpv_code');
+            const cpvSelect = document.getElementById('cpvFilter');
+            cpvCodes.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = `${item.value} (${item.count})`;
+                cpvSelect.appendChild(option);
+            });
+
+            // Regionen laden
+            const regions = await getFacets('buyer_region');
+            const regionSelect = document.getElementById('regionFilter');
+            regions.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = `${item.value} (${item.count})`;
+                regionSelect.appendChild(option);
+            });
+
+            // Auftraggeber laden (Top 50)
+            const buyers = await getFacets('buyer_name', 50);
+            const buyerSelect = document.getElementById('buyerFilter');
+            buyers.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = `${item.value.substring(0, 50)} (${item.count})`;
+                buyerSelect.appendChild(option);
+            });
+        }
+
+        async function getFacets(field, count = 20) {
+            try {
+                const url = `${CONFIG.searchEndpoint}/indexes/${CONFIG.indexName}/docs/search?api-version=${CONFIG.apiVersion}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'api-key': CONFIG.apiKey
+                    },
+                    body: JSON.stringify({
+                        search: '*',
+                        facets: [`${field},count:${count}`],
+                        top: 0
+                    })
+                });
+
+                const data = await response.json();
+                return data['@search.facets'][field] || [];
+            } catch (error) {
+                console.error('Facets error:', error);
+                return [];
+            }
+        }
+
+        // ========================================================================
+        // RESET
+        // ========================================================================
+
+        function reset() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('cpvFilter').value = '';
+            document.getElementById('regionFilter').value = '';
+            document.getElementById('buyerFilter').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // ========================================================================
+        // ENTER-TASTE FÜR SUCHE
+        // ========================================================================
+
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                search();
+            }
+        });
+
+        // ========================================================================
+        // INIT
+        // ========================================================================
+
+        window.addEventListener('load', () => {
+            loadFilters();
+        });
+    </script>
+</body>
+</html>

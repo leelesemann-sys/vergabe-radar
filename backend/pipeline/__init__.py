@@ -1,0 +1,1 @@
+"""Vergabe-Radar Ingest Pipeline."""

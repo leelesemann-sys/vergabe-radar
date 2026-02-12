@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VergabeRadar - Öffentliche Ausschreibungen</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 1rem; }
+
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .brand h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .brand p {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        /* Stats Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-value.primary { color: #111827; }
+        .stat-value.blue { color: #2563eb; }
+        .stat-value.red { color: #dc2626; }
+
+        .stat-note {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+
+        /* Search */
+        .search-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .search-icon {
+            color: #9ca3af;
+            font-size: 1.25rem;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            color: #111827;
+        }
+
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .clear-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .clear-btn:hover { color: #6b7280; }
+
+        /* Results */
+        .results-count {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f9fafb;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6b7280;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr {
+            border-top: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+        }
+
+        .tender-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+
+        .tender-id {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+        }
+
+        .deadline {
+            font-weight: 500;
+        }
+
+        .deadline.urgent {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .days-left {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .days-left.urgent {
+            color: #ef4444;
+        }
+
+        .details-btn {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .details-btn:hover {
+            color: #1e40af;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #111827;
+            padding-right: 2rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #6b7280;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-field-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-field-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .modal-field-value.red {
+            color: #dc2626;
+        }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #1e40af;
+        }
+
+        .action-note {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .hide-mobile { display: none; }
+            th, td { padding: 0.75rem; }
+            .modal-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">V</div>
+                <div class="brand">
+                    <h1>VergabeRadar</h1>
+                    <p>Öffentliche Ausschreibungen</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Gesamt</div>
+                <div class="stat-value primary" id="total-count">5</div>
+                <div class="stat-note">Ausschreibungen</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Neu heute</div>
+                <div class="stat-value blue">5</div>
+                <div class="stat-note">Veröffentlicht 31.12.25</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Bald abgelaufen</div>
+                <div class="stat-value red" id="urgent-count">2</div>
+                <div class="stat-note">Frist < 7 Tage</div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                class="search-input" 
+                id="search-input"
+                placeholder="Suche nach Ausschreibungen... (z.B. IT, Software, Facility)"
+            >
+            <button class="clear-btn" id="clear-btn" style="display: none;">✕</button>
+        </div>
+
+        <!-- Results Count -->
+        <div class="results-count" id="results-count">5 Ergebnisse</div>
+
+        <!-- Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ausschreibung</th>
+                        <th class="hide-mobile">Kategorie</th>
+                        <th class="hide-mobile">Veröffentlicht</th>
+                        <th>Frist</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Dynamically filled -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <button class="close-btn" id="close-modal">✕</button>
+            </div>
+            <div class="modal-grid">
+                <div>
+                    <div class="modal-field-label">Ausschreibungs-ID</div>
+                    <div class="modal-field-value" id="modal-id"></div>
+                </div>
+                <div>
+                    <div class="modal-field-label">Kategorie</div>
+                    <div class="modal-field-value" id="modal-category"></div>
+                </div>
+                <div>
+                    <div class="modal-field-label">Veröffentlicht</div>
+                    <div class="modal-field-value" id="modal-published"></div>
+                </div>
+                <div>
+                    <div class="modal-field-label">Frist</div>
+                    <div class="modal-field-value red" id="modal-deadline"></div>
+                </div>
+            </div>
+            <a href="#" id="modal-link" target="_blank" class="action-btn">
+                Zur vollständigen Ausschreibung →
+            </a>
+            <p class="action-note">Öffnet evergabe-online.de in neuem Tab</p>
+        </div>
+    </div>
+
+    <script>
+        // Daten
+        const TENDERS = [
+            {
+                title: "Depotinstandsetzung 2026 EGV Frankfurt am Main - AP07 Gerüstbau",
+                url: "https://www.evergabe-online.de/tenderdetails.html?id=827375",
+                id: "827375",
+                published_date: "31.12.25",
+                deadline: "29.01.26, 13:00",
+                search_keyword: "IT-Dienstleistungen"
+            },
+            {
+                title: "Kartierung von FFH-Lebensraumtypen (LRT), LRT-Verlustflächen, LRT-Entwicklungsflächen",
+                url: "https://www.evergabe-online.de/tenderdetails.html?id=826366",
+                id: "826366",
+                published_date: "31.12.25",
+                deadline: "02.02.26, 23:59",
+                search_keyword: "IT-Dienstleistungen"
+            },
+            {
+                title: "Depotinstandsetzung 2026 EGV Frankfurt am Main - AP01 Schiffbauliche Arbeiten",
+                url: "https://www.evergabe-online.de/tenderdetails.html?id=827332",
+                id: "827332",
+                published_date: "31.12.25",
+                deadline: "29.01.26, 13:00",
+                search_keyword: "IT-Dienstleistungen"
+            },
+            {
+                title: "Gelände- und Sensorpflege an DWD Standorten Lingen-Baccum und Hannover",
+                url: "https://www.evergabe-online.de/tenderdetails.html?id=827327",
+                id: "827327",
+                published_date: "31.12.25",
+                deadline: "04.02.26, 23:59",
+                search_keyword: "Facility Management"
+            },
+            {
+                title: "REZ NORD 45ind AA Osnabrück",
+                url: "https://www.evergabe-online.de/tenderdetails.html?id=827273",
+                id: "827273",
+                published_date: "31.12.25",
+                deadline: "03.02.26, 12:00",
+                search_keyword: "IT-Dienstleistungen"
+            }
+        ];
+
+        let filteredTenders = [...TENDERS];
+        let selectedTender = null;
+
+        // Elements
+        const searchInput = document.getElementById('search-input');
+        const clearBtn = document.getElementById('clear-btn');
+        const tableBody = document.getElementById('table-body');
+        const resultsCount = document.getElementById('results-count');
+        const modal = document.getElementById('modal');
+        const closeModalBtn = document.getElementById('close-modal');
+
+        // Helper: Days until deadline
+        function getDaysUntilDeadline(deadlineStr) {
+            try {
+                const [date, time] = deadlineStr.split(', ');
+                const [day, month, year] = date.split('.');
+                const fullYear = parseInt(year) < 100 ? 2000 + parseInt(year) : parseInt(year);
+                const deadline = new Date(fullYear, parseInt(month) - 1, parseInt(day));
+                const today = new Date();
+                const diffTime = deadline - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
+            } catch {
+                return null;
+            }
+        }
+
+        // Render table
+        function renderTable() {
+            tableBody.innerHTML = '';
+
+            if (filteredTenders.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            Keine Ausschreibungen gefunden.<br>
+                            <small>Versuche einen anderen Suchbegriff.</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filteredTenders.forEach(tender => {
+                const daysLeft = getDaysUntilDeadline(tender.deadline);
+                const isUrgent = daysLeft !== null && daysLeft <= 7;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="tender-title">${tender.title.substring(0, 80)}...</div>
+                        <div class="tender-id">ID: ${tender.id}</div>
+                    </td>
+                    <td class="hide-mobile">
+                        <span class="category-badge">${tender.search_keyword}</span>
+                    </td>
+                    <td class="hide-mobile">${tender.published_date}</td>
+                    <td>
+                        <div class="deadline ${isUrgent ? 'urgent' : ''}">${tender.deadline}</div>
+                        ${daysLeft !== null ? `<div class="days-left ${isUrgent ? 'urgent' : ''}">${daysLeft > 0 ? daysLeft + ' Tage' : 'Abgelaufen'}</div>` : ''}
+                    </td>
+                    <td>
+                        <button class="details-btn" data-id="${tender.id}">Details →</button>
+                    </td>
+                `;
+
+                row.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('details-btn')) {
+                        showModal(tender);
+                    }
+                });
+
+                row.querySelector('.details-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showModal(tender);
+                });
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Filter tenders
+        function filterTenders(term) {
+            if (!term) {
+                filteredTenders = [...TENDERS];
+            } else {
+                const lower = term.toLowerCase();
+                filteredTenders = TENDERS.filter(t => 
+                    t.title.toLowerCase().includes(lower) ||
+                    t.search_keyword.toLowerCase().includes(lower)
+                );
+            }
+            
+            renderTable();
+            updateResultsCount();
+        }
+
+        // Update results count
+        function updateResultsCount() {
+            const count = filteredTenders.length;
+            const term = searchInput.value;
+            resultsCount.textContent = `${count} ${count === 1 ? 'Ergebnis' : 'Ergebnisse'}${term ? ` für "${term}"` : ''}`;
+            document.getElementById('total-count').textContent = count;
+        }
+
+        // Show modal
+        function showModal(tender) {
+            selectedTender = tender;
+            document.getElementById('modal-title').textContent = tender.title;
+            document.getElementById('modal-id').textContent = tender.id;
+            document.getElementById('modal-category').textContent = tender.search_keyword;
+            document.getElementById('modal-published').textContent = tender.published_date;
+            document.getElementById('modal-deadline').textContent = tender.deadline;
+            document.getElementById('modal-link').href = tender.url;
+            modal.classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            modal.classList.remove('active');
+            selectedTender = null;
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            clearBtn.style.display = value ? 'block' : 'none';
+            filterTenders(value);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            filterTenders('');
+        });
+
+        closeModalBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Initialize
+        renderTable();
+        updateResultsCount();
+    </script>
+</body>
+</html>
