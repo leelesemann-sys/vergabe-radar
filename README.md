@@ -1,36 +1,38 @@
 # Vergabe-Radar
 
-Automatisierte Erfassung, Aufbereitung und semantische Suche deutscher oeffentlicher Ausschreibungen.
+> **Language:** English | [Deutsch](README.de.md)
 
-Vergabe-Radar aggregiert taeglich Bekanntmachungen von oeffentlichevergabe.de, normalisiert die Daten in einer relationalen Datenbank, reichert sie mit Geokoordinaten an und macht sie ueber Hybrid Search (Vektor + Keyword + Semantic Ranking) praezise durchsuchbar.
+Automated collection, processing, and semantic search of German public procurement notices (Ausschreibungen).
 
-## Was dieses Projekt leistet
+Vergabe-Radar aggregates daily notices from oeffentlichevergabe.de, normalizes the data in a relational database, enriches them with geocoordinates, and makes them precisely searchable via Hybrid Search (Vector + Keyword + Semantic Ranking).
 
-**Datenerfassung** -- Vollautomatischer Download der taeglichen CSV-Exporte (~300 Ausschreibungen/Tag, 19 Tabellen) ueber die offizielle API. Erweiterbare Architektur fuer zusaetzliche Quellen (TED/EU, Bund.de).
+## What This Project Does
 
-**Normalisierung** -- Import in 9 sauber normalisierte SQL-Tabellen (Notices, Procedures, Lots, Purposes, Classifications, Organisations, Places, Submission Terms, Tenders) mit Duplikat- und FK-Handling.
+**Data Collection** -- Fully automated download of daily CSV exports (~300 notices/day, 19 tables) via the official API. Extensible architecture for additional sources (TED/EU, Bund.de).
 
-**Denormalisierung** -- Aufbau einer optimierten Suchtabelle aus den normalisierten Daten. Jede Ausschreibung wird zu einem flachen Dokument mit allen relevanten Feldern zusammengefuehrt.
+**Normalization** -- Import into 9 cleanly normalized SQL tables (Notices, Procedures, Lots, Purposes, Classifications, Organisations, Places, Submission Terms, Tenders) with duplicate and FK handling.
 
-**Geocoding** -- 3-stufiger Fallback (exakte PLZ, PLZ-Prefix, Regex-Extraktion aus Beschreibungstext) gegen 8.300+ deutsche Postleitzahlen. Ermoeglicht Umkreissuche.
+**Denormalization** -- Construction of an optimized search table from the normalized data. Each Ausschreibung (procurement notice) is merged into a flat document with all relevant fields.
 
-**Embedding** -- Generierung semantischer Vektoren (text-embedding-3-small, 256 Dimensionen) fuer jede Ausschreibung. Der Embedding-Text kombiniert Titel, Beschreibung, Auftraggeber, Ort, CPV-Code und Vertragsart.
+**Geocoding** -- 3-level fallback (exact postal code, postal code prefix, regex extraction from description text) against 8,300+ German postal codes. Enables radius search.
 
-**Hybrid Search** -- Azure AI Search Index mit drei Suchebenen:
-- **Vektor-Suche** (HNSW, Cosine Similarity) -- findet semantisch aehnliche Ausschreibungen auch ohne exakte Keyword-Treffer
-- **Keyword-Suche** (BM25, de.microsoft Analyzer) -- praezise Volltextsuche mit deutscher Sprachanalyse
-- **Semantic Ranking** -- KI-basiertes Re-Ranking der Ergebnisse fuer optimale Relevanz
+**Embedding** -- Generation of semantic vectors (text-embedding-3-small, 256 dimensions) for each Ausschreibung. The embedding text combines title, description, contracting authority, location, CPV code, and contract type.
 
-## Architektur
+**Hybrid Search** -- Azure AI Search index with three search layers:
+- **Vector Search** (HNSW, Cosine Similarity) -- finds semantically similar Ausschreibungen even without exact keyword matches
+- **Keyword Search** (BM25, de.microsoft Analyzer) -- precise full-text search with German language analysis
+- **Semantic Ranking** -- AI-based re-ranking of results for optimal relevance
+
+## Architecture
 
 ```
 oeffentlichevergabe.de API
          |
     [Download CSV.zip]
          |
-    [Import -> Azure SQL]        9 normalisierte Tabellen
+    [Import -> Azure SQL]        9 normalized tables
          |
-    [Denormalisierung]           -> search_documents
+    [Denormalization]            -> search_documents
          |
     [Geocoding]                  PLZ -> lat/lng
          |
@@ -46,73 +48,73 @@ oeffentlichevergabe.de API
 ```bash
 cd backend
 
-# 1. Environment einrichten
+# 1. Set up environment
 cp .env.example .env
-# .env mit Azure-Credentials ausfuellen
+# Fill .env with Azure credentials
 
-# 2. Dependencies installieren
+# 2. Install dependencies
 pip install python-dotenv sqlalchemy pyodbc pandas requests openai azure-search-documents
 
-# 3. Search Index erstellen (einmalig)
+# 3. Create search index (one-time)
 python run_pipeline.py --create-index
 
-# 4. Pipeline fuer einen Tag ausfuehren
+# 4. Run pipeline for a single day
 python run_pipeline.py --date 2025-12-30
 
-# 5. Backfill fuer einen Zeitraum
+# 5. Backfill for a date range
 python run_pipeline.py --backfill 2025-01-01 2025-12-31
 
-# 6. Taeglicher Lauf (Default: gestern)
+# 6. Daily run (default: yesterday)
 python run_pipeline.py
 ```
 
-## Projektstruktur
+## Project Structure
 
 ```
 backend/
-  config.py                  Zentrale Konfiguration (env-vars)
-  db.py                      SQLAlchemy Connection Helper
-  run_pipeline.py            Pipeline-Orchestrierung
-  app.py                     Streamlit Frontend (Prototyp)
+  config.py                  Central configuration (env-vars)
+  db.py                      SQLAlchemy connection helper
+  run_pipeline.py            Pipeline orchestration
+  app.py                     Streamlit frontend (prototype)
   pipeline/
-    base_source.py           Abstrakte Datenquelle (erweiterbar)
-    oeffentlichevergabe.py   Konkrete Quelle: oeffentlichevergabe.de
-    importer.py              CSV -> 9 SQL-Tabellen
+    base_source.py           Abstract data source (extensible)
+    oeffentlichevergabe.py   Concrete source: oeffentlichevergabe.de
+    importer.py              CSV -> 9 SQL tables
     denormalizer.py          SQL -> search_documents
-    enricher.py              PLZ-Geocoding
-    embedder.py              Azure OpenAI Embeddings
-    indexer.py               Azure AI Search Push
-sql/                         Datenbank-Schema
-frontend/                    HTML/React Prototypen
-docs/                        Dokumentation
+    enricher.py              PLZ geocoding
+    embedder.py              Azure OpenAI embeddings
+    indexer.py               Azure AI Search push
+sql/                         Database schema
+frontend/                    HTML/React prototypes
+docs/                        Documentation
 ```
 
-## Azure-Ressourcen
+## Azure Resources
 
-| Dienst | Zweck | Tier |
-|--------|-------|------|
-| Azure SQL Database | Normalisierte Datenhaltung | Serverless Gen5 |
-| Azure AI Search | Hybrid Search Index | Free |
-| Azure OpenAI | Embedding-Generierung | text-embedding-3-small |
+| Service | Purpose | Tier |
+|---------|---------|------|
+| Azure SQL Database | Normalized data storage | Serverless Gen5 |
+| Azure AI Search | Hybrid search index | Free |
+| Azure OpenAI | Embedding generation | text-embedding-3-small |
 
-## Erweiterbarkeit
+## Extensibility
 
-Neue Datenquellen werden als Subklasse von `TenderSource` implementiert:
+New data sources are implemented as subclasses of `TenderSource`:
 
 ```python
-class MeineQuelle(TenderSource):
+class MySource(TenderSource):
     @property
     def name(self) -> str:
-        return "meine-quelle"
+        return "my-source"
 
     def fetch(self, target_date: date) -> dict[str, pd.DataFrame]:
-        # Daten holen und als DataFrames zurueckgeben
+        # Fetch data and return as DataFrames
         ...
 
     def get_import_order(self) -> list[str]:
         return ["notice", "procedure", "lot", ...]
 ```
 
-## Lizenz
+## License
 
 MIT
